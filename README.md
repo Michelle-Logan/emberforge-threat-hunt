@@ -339,9 +339,17 @@ EmberForgeX_CL
 
 ---
 
-### 10. Remote Service-Based Execution on the Domain Controller
+### 10. Remote Execution on the Domain Controller via Service-Based Command Launch
 
-The attacker reused the same remote execution pattern against the Domain Controller, with commands launched in a service context and wrapped through temporary batch files.
+Process creation logs on the Domain Controller showed commands being executed through `services.exe`, indicating service-based execution commonly associated with remote administration or lateral movement tools.
+
+The observed process chain was:
+
+`services.exe → cmd.exe → execute.bat → cmd.exe /C <command>`
+
+In each case, `cmd.exe` wrote a command into a temporary batch file (`C:\Windows\TEMP\execute.bat`), executed the batch file, and then deleted it. This pattern was used to run multiple `vssadmin` commands, including listing, creating, and deleting volume shadow copies.
+
+This behavior is suspicious because attackers frequently use service-based execution and temporary batch files to run commands remotely while minimizing artifacts. The use of `vssadmin` against the Domain Controller suggests possible preparation for accessing protected files such as `NTDS.dit` through a shadow copy.
 
 **Observed process chain**
 
@@ -365,9 +373,7 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: services.exe launching cmd.exe wrapper on the DC]
-```
+<img width="1700" height="139" alt="Screenshot 2026-04-13 163412" src="https://github.com/user-attachments/assets/f79e2538-fbf7-4af4-839f-b7f4e2ed4202" />
 
 ---
 
@@ -389,20 +395,18 @@ copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\Windows\NTDS\ntds.dit C:\Wi
 
 ```kql
 EmberForgeX_CL
+| where todatetime(UtcTime_s) between (datetime(2026-01-30 21:00:00) .. datetime(2026-01-31 00:00:00))
 | where EventCode_s == "1"
-| parse Raw_s with * "Image'>" Image "<" *
 | parse Raw_s with * "CommandLine'>" CommandLine "<" *
-| where Computer has "EEU3IA2"
-| where CommandLine has_any ("vssadmin", "HarddiskVolumeShadowCopy", "ntds.dit", "copy ")
-| project UtcTime_s, Computer, Image, CommandLine
-| order by todatetime(UtcTime_s) asc
+| parse Raw_s with * "Image'>" Image "<" *
+| parse Raw_s with * "ParentImage'>" ParentImage "<" *
+| where CommandLine has_any ("HarddiskVolumeShadowCopy", "GLOBALROOT", "shadowcopy")
+| project UtcTime_s, Computer, Image, ParentImage, CommandLine
 ```
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: shadow copy creation and ntds.dit copy command]
-```
+<img width="1818" height="163" alt="Screenshot 2026-04-13 163815" src="https://github.com/user-attachments/assets/e89d27a7-79db-4de0-9a76-7d2b893066bf" />
 
 ---
 
@@ -429,9 +433,7 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: domain account creation command]
-```
+<img width="1175" height="89" alt="Screenshot 2026-04-13 164037" src="https://github.com/user-attachments/assets/3e99ccfe-6d47-4649-bd40-9a7fd03d935b" />
 
 ---
 
@@ -458,9 +460,8 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: output redirection and execute.bat wrapper pattern]
-```
+<img width="1144" height="124" alt="image" src="https://github.com/user-attachments/assets/417ca70b-9d4f-4669-bf87-c2583ecee013" />
+
 
 ---
 
