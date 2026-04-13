@@ -552,8 +552,6 @@ Attacker Capability: Advanced / Multi-Stage
 **Michelle Logan**
 Cybersecurity / Threat Hunting Portfolio Project
 
-**Add your links here**
+* GitHub: https://github.com/Michelle-Logan
 
-* GitHub: `https://github.com/your-profile`
-* LinkedIn: `https://www.linkedin.com/in/your-profile`
 
