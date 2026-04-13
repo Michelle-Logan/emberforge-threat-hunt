@@ -70,9 +70,8 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: rundll32.exe loading review.dll from D: drive]
-```
+<img width="1125" height="67" alt="Screenshot 2026-04-13 122948" src="https://github.com/user-attachments/assets/2117fa60-a215-48cf-8894-90e6bc04ecb1" />
+
 
 ---
 
@@ -102,15 +101,26 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: 7zG.exe extracting archive to EmberForge_Review folder]
-```
+<img width="998" height="166" alt="Screenshot 2026-04-13 151111" src="https://github.com/user-attachments/assets/ed9f8a02-0b56-453d-93c7-248432e927d6" />
+
 
 ---
 
 ### 3. Privilege Escalation via UAC Bypass
 
-The attacker modified registry values associated with the `ms-settings` handler, then executed `fodhelper.exe` to bypass UAC and launch the payload with elevated privileges.
+The attacker leveraged a known UAC bypass technique by modifying the registry path associated with the `ms-settings` protocol handler. This allowed them to hijack execution flow and run a malicious payload with elevated privileges.
+
+Specifically, the attacker added a registry key:
+
+HKCU\Software\Classes\ms-settings\shell\open\command
+
+and set its value to point to a malicious executable located at:
+
+C:\Users\Public\update.exe
+
+The attacker then executed fodhelper.exe, a trusted Windows binary that is auto-elevated and does not prompt for UAC. Because fodhelper.exe invokes the ms-settings handler, the system instead executed the attacker-controlled payload with administrative privileges.
+
+This technique allowed the attacker to bypass UAC and escalate privileges without user interaction.
 
 **Key evidence**
 
@@ -141,9 +151,7 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: registry hijack event and fodhelper.exe execution]
-```
+<img width="1132" height="332" alt="Screenshot 2026-04-13 152602" src="https://github.com/user-attachments/assets/9fe88bce-c70b-4a35-a3ab-2931003a7cf1" />
 
 ---
 
