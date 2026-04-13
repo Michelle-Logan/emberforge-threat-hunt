@@ -155,14 +155,26 @@ EmberForgeX_CL
 
 ---
 
-### 4. Payload Execution
+### 4. Persistence via Scheduled Task (System-Level Execution)
 
-The attacker payload `update.exe` was launched from a highly suspicious path and later used in multiple stages of the intrusion.
+Analysis of process creation logs revealed the use of schtasks.exe to establish persistence on the system.
+
+The following command was executed:
+
+schtasks /create /tn WindowsUpdate /tr C:\Users\Public\update.exe /sc onstart /ru system
+
+This command creates a scheduled task named "WindowsUpdate" that executes the malicious payload located at C:\Users\Public\update.exe each time the system starts.
+
+Notably, the task is configured to run under the SYSTEM account, granting the attacker the highest level of privileges on the host.
+
+Additionally, process lineage analysis shows that the parent process responsible for creating the task was the same malicious executable (update.exe), confirming successful execution of the payload and attacker-controlled persistence.
+
+This technique ensures the attacker maintains access across reboots and operates with elevated privileges.
 
 **Key evidence**
 
 ```text
-C:\Users\Public\update.exe
+schtasks /create /tn WindowsUpdate /tr C:\Users\Public\update.exe /sc onstart /ru system
 ```
 
 ### KQL Query
@@ -180,42 +192,11 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: update.exe execution from C:\Users\Public]
-```
+<img width="694" height="110" alt="Screenshot 2026-04-13 153340" src="https://github.com/user-attachments/assets/304f56c8-2539-4cda-8d0b-0a851eeec1e5" />
 
 ---
 
-### 5. Persistence via Scheduled Task
-
-The attacker created a scheduled task named `WindowsUpdate` to run the payload as SYSTEM at startup.
-
-**Key evidence**
-
-```text
-schtasks /create /tn "WindowsUpdate" /tr "C:\Users\Public\update.exe" /sc onstart /ru system
-```
-
-### KQL Query
-
-```kql
-EmberForgeX_CL
-| where EventCode_s == "1"
-| parse Raw_s with * "CommandLine'>" CommandLine "<" *
-| where CommandLine has "schtasks" and CommandLine has "/create"
-| project UtcTime_s, Computer, CommandLine
-| order by todatetime(UtcTime_s) asc
-```
-
-### Evidence Screenshot
-
-```text
-[Add screenshot here: scheduled task creation command]
-```
-
----
-
-### 6. LSASS Dumping for Credential Theft
+### 5. LSASS Dumping for Credential Theft
 
 The attacker created an LSASS memory dump using `update.exe`, indicating credential harvesting.
 
@@ -245,13 +226,11 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: update.exe creating lsass.dmp]
-```
+<img width="798" height="84" alt="Screenshot 2026-04-13 153515" src="https://github.com/user-attachments/assets/acfc687a-6c74-4d40-b3ba-dce13b10017a" />
 
 ---
 
-### 7. Kerberoasting Activity
+### 6. Kerberoasting Activity
 
 A burst of Event ID 4769 records indicated suspicious Kerberos service ticket requests consistent with Kerberoasting.
 
@@ -278,7 +257,7 @@ SecurityEvent
 
 ---
 
-### 8. Lateral Movement via NTLM Network Logons
+### 7. Lateral Movement via NTLM Network Logons
 
 Failed authentication activity on Event ID 4625 showed Logon Type 3 network logons using the `NtLmSsp` logon process, consistent with lateral movement attempts.
 
@@ -305,7 +284,7 @@ SecurityEvent
 
 ---
 
-### 9. Network Share Creation for Tool Distribution
+### 8. Network Share Creation for Tool Distribution
 
 The attacker created an SMB share pointing to `C:\Users\Public` and granted full access to everyone, turning the workstation into a distribution point.
 
@@ -334,7 +313,7 @@ EmberForgeX_CL
 
 ---
 
-### 10. Firewall Modification to Allow SMB
+### 9. Firewall Modification to Allow SMB
 
 The attacker added a firewall rule named `SMB` to permit inbound TCP 445 traffic.
 
@@ -363,7 +342,7 @@ EmberForgeX_CL
 
 ---
 
-### 11. Remote Service-Based Execution on the Domain Controller
+### 10. Remote Service-Based Execution on the Domain Controller
 
 The attacker reused the same remote execution pattern against the Domain Controller, with commands launched in a service context and wrapped through temporary batch files.
 
@@ -395,7 +374,7 @@ EmberForgeX_CL
 
 ---
 
-### 12. NTDS.dit Extraction via Volume Shadow Copy
+### 11. NTDS.dit Extraction via Volume Shadow Copy
 
 After reaching the DC, the attacker created a shadow copy workflow and copied the Active Directory database out of the snapshot.
 
@@ -430,7 +409,7 @@ EmberForgeX_CL
 
 ---
 
-### 13. Domain Account Creation
+### 12. Domain Account Creation
 
 The attacker created a new domain account for persistence.
 
@@ -459,7 +438,7 @@ EmberForgeX_CL
 
 ---
 
-### 14. Command Output Redirection and Batch Staging
+### 13. Command Output Redirection and Batch Staging
 
 The attacker repeatedly wrapped commands in temporary batch files and redirected output to files in Windows temp directories.
 
@@ -505,54 +484,6 @@ EmberForgeX_CL
 | Network Share Manipulation          | T1135     |
 | Firewall Rule Modification          | T1562     |
 | Clear / Obscure Execution Artifacts | T1070     |
-
----
-
-## 📸 Evidence Screenshots Checklist
-
-Use this section in GitHub to drop in your images later.
-
-### Suggested structure
-
-```markdown
-## Evidence Screenshots
-
-### 1. Initial DLL Execution
-![Initial DLL Execution](images/initial-dll-execution.png)
-
-### 2. Archive Extraction
-![Archive Extraction](images/archive-extraction.png)
-
-### 3. UAC Bypass Registry Hijack
-![UAC Bypass](images/uac-bypass.png)
-
-### 4. Scheduled Task Persistence
-![Scheduled Task Persistence](images/persistence-schtasks.png)
-
-### 5. LSASS Dump File Creation
-![LSASS Dump](images/lsass-dump.png)
-
-### 6. Kerberoasting Activity
-![Kerberoasting](images/kerberoasting-4769.png)
-
-### 7. Lateral Movement via NTLM
-![NTLM Lateral Movement](images/ntlm-lateral-movement.png)
-
-### 8. Network Share Creation
-![Network Share Creation](images/net-share-tools.png)
-
-### 9. Firewall Rule Creation
-![Firewall Rule](images/firewall-smb-rule.png)
-
-### 10. DC Remote Execution Pattern
-![DC Remote Execution](images/dc-services-cmd-wrapper.png)
-
-### 11. NTDS.dit Extraction
-![NTDS Extraction](images/ntds-shadow-copy.png)
-
-### 12. Domain Account Creation
-![Domain Account Creation](images/domain-account-created.png)
-```
 
 ---
 
