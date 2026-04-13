@@ -243,23 +243,26 @@ A burst of Event ID 4769 records indicated suspicious Kerberos service ticket re
 ### KQL Query
 
 ```kql
-SecurityEvent
-| where EventID == 4769
-| summarize Count=count() by TimeGenerated, IpAddress, TargetUserName, ServiceName, TicketEncryptionType
-| order by TimeGenerated asc
+EmberForgeX_CL
+| where EventCode_s == 4769
+| summarize Count=count() by TimeGenerated
 ```
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: burst of 4769 events showing suspicious ticket requests]
-```
+<img width="309" height="339" alt="Screenshot 2026-04-13 154601" src="https://github.com/user-attachments/assets/ddd7f821-0204-497c-a803-eb1e0969c041" />
 
 ---
 
 ### 7. Lateral Movement via NTLM Network Logons
 
-Failed authentication activity on Event ID 4625 showed Logon Type 3 network logons using the `NtLmSsp` logon process, consistent with lateral movement attempts.
+Analysis of Windows Security Event ID 4625 logs revealed failed authentication attempts consistent with lateral movement activity.
+
+At 22:35:34, a system at IP address 10.0.2.69 attempted to authenticate to EC2AMAZ-EEU3IA2 using the Administrator account. The logon attempt was performed over the network (Logon Type 3) using the NTLM authentication protocol (NtLmSsp).
+
+The use of NTLM instead of Kerberos, combined with a privileged account and network-based logon attempt, is indicative of potential lateral movement techniques such as pass-the-hash or brute force attempts.
+
+The failed authentication suggests either incorrect credentials or unsuccessful exploitation, but still represents suspicious activity that warrants further investigation.
 
 **Protocol / logon process**
 
@@ -270,17 +273,15 @@ NtLmSsp
 ### KQL Query
 
 ```kql
-SecurityEvent
-| where EventID == 4625
-| project TimeGenerated, Computer, TargetUserName, LogonType, IpAddress, LogonProcessName, AuthenticationPackageName
+EmberForgeX_CL
+| where EventCode_s == 4625
+| project TimeGenerated, Computer,IPAddress, TargetUserName_s, LogonType_s, LogonProcessName_s, AuthenticationPackageName_s
 | order by TimeGenerated asc
 ```
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: Event 4625 entries showing Logon Type 3 and NtLmSsp]
-```
+<img width="1299" height="198" alt="Screenshot 2026-04-13 155031" src="https://github.com/user-attachments/assets/402cf059-6e53-4d66-9dbd-f4bb36474563" />
 
 ---
 
@@ -307,9 +308,7 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: net share command creating tools share]
-```
+<img width="766" height="85" alt="Screenshot 2026-04-13 155405" src="https://github.com/user-attachments/assets/cc480621-48f8-4e40-862d-f249a50d5862" />
 
 ---
 
@@ -336,9 +335,7 @@ EmberForgeX_CL
 
 ### Evidence Screenshot
 
-```text
-[Add screenshot here: firewall rule creation for SMB]
-```
+<img width="1008" height="89" alt="Screenshot 2026-04-13 155520" src="https://github.com/user-attachments/assets/ff0b4d13-9729-44ba-af6a-25ac59438ffc" />
 
 ---
 
